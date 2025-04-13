@@ -1,0 +1,111 @@
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = "php",
+    callback = function()
+        vim.opt.smartindent = true
+        vim.opt.indentexpr = nil
+    end,
+})
+-- vim.api.nvim_create_autocmd("FileType", {
+--     pattern = "php",
+--     callback = function()
+--         -- Helper: Check if a line is nonblank and not a comment.
+--         local function is_useful_line(line)
+--             return line:match("%S") and not (line:match("^%s*#") or line:match("^%s*//"))
+--         end
+-- 
+--         -- Helper: Count unescaped double quotes in a line.
+--         local function count_unescaped_quotes(line)
+--             local count = 0
+--             local i = 1
+--             while i <= #line do
+--                 local c = line:sub(i, i)
+--                 if c == '"' then
+--                     if i == 1 or line:sub(i - 1, i - 1) ~= '\\' then
+--                         count = count + 1
+--                     end
+--                 end
+--                 i = i + 1
+--             end
+--             return count
+--         end
+-- 
+--         function _G.custom_php_indent()
+--             local shift = vim.bo.shiftwidth
+--             local curr_line_num = vim.v.lnum
+--             local curr_line = vim.fn.getline(curr_line_num)
+-- 
+--             -- If inside a multi-line string, just return the indent of the previous nonblank line.
+--             local total_quotes = 0
+--             for i = 1, curr_line_num do
+--                 total_quotes = total_quotes + count_unescaped_quotes(vim.fn.getline(i))
+--             end
+--             if total_quotes % 2 == 1 then
+--                 local prev = vim.fn.prevnonblank(curr_line_num)
+--                 if prev > 0 then
+--                     return vim.fn.indent(prev)
+--                 else
+--                     return 0
+--                 end
+--             end
+-- 
+--             -- Compute the "raw" indent level (PHP-only version, no HTML logic).
+--             local level = 0
+--             for i = 1, curr_line_num - 1 do
+--                 local line = vim.fn.getline(i)
+--                 if is_useful_line(line) then
+--                     -- Process PHP/colon-based indentation:
+--                     if line:match(":%s*$") then
+--                         level = level + 1
+--                     end
+--                     if line:match("^%s*endif")
+--                         or line:match("^%s*endforeach")
+--                         or line:match("^%s*endfor")
+--                         or line:match("^%s*endwhile")
+--                         or line:match("^%s*elseif")
+--                         or line:match("^%s*else")
+--                         or line:match("^%s*endswitch")
+--                         or line:match("^%s*break") then
+--                         level = level - 1
+--                     end
+--                     local open_braces = select(2, line:gsub("{", ""))
+--                     local close_braces = select(2, line:gsub("}", ""))
+--                     level = level + open_braces - close_braces
+--                     local open_square = select(2, line:gsub("%[", ""))
+--                     local close_square = select(2, line:gsub("%]", ""))
+--                     level = level + open_square - close_square
+--                     local open_paren = select(2, line:gsub("%(", ""))
+--                     local close_paren = select(2, line:gsub("%)", ""))
+--                     level = level + open_paren - close_paren
+--                 end
+--             end
+-- 
+--             -- Adjust for the current line if it starts with a closing keyword or bracket.
+--             if curr_line:match("^%s*endif")
+--                 or curr_line:match("^%s*elseif")
+--                 or curr_line:match("^%s*else")
+--                 or curr_line:match("^%s*endforeach")
+--                 or curr_line:match("^%s*endfor")
+--                 or curr_line:match("^%s*endwhile")
+--                 or curr_line:match("^%s*endswitch")
+--                 or curr_line:match("^%s*>")  then  -- catches a lone '>'
+--                 level = level - 1
+--             end
+--             local closing_seq = curr_line:match("^%s*([}%]])+")
+--             if closing_seq then
+--                 level = level - #closing_seq
+--             end
+-- 
+--             -- Extra indent for string concatenation lines.
+--             if curr_line:match("^%s*%.") then
+--                 level = level + 1
+--             end
+-- 
+--             if level < 0 then level = 0 end
+--             return level * shift
+--         end
+-- 
+--         vim.cmd("setlocal indentexpr=v:lua.custom_php_indent()")
+--         vim.bo.indentkeys = vim.bo.indentkeys .. ",0},0],0),0else,0elseif,0endif,0endforeach,0endfor,0endwhile,0endswitch"
+--     end,
+-- })
+-- 
