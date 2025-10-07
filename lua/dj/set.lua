@@ -40,4 +40,7 @@ vim.opt.splitright = true
 vim.opt.splitbelow = true
 
 vim.o.guifont = "FiraCode Nerd Font:h12"
+vim.g.have_nerd_font = true
 
+
+vim.opt.cursorline = true

@@ -3,63 +3,77 @@ vim.opt.signcolumn = 'yes'
 vim.opt.termguicolors = true
 
 -- Add LSP capabilities from nvim-cmp
-local lspconfig_defaults = require('lspconfig').util.default_config
-lspconfig_defaults.capabilities = vim.tbl_deep_extend(
-'force',
-lspconfig_defaults.capabilities,
-require('cmp_nvim_lsp').default_capabilities()
-)
+local lspconfig = require('lspconfig')
+local cmp_nvim_lsp = require('cmp_nvim_lsp')
 
 -- Setup Mason and Mason LSP bridge
 require("mason").setup()
 
+-- Configure servers using a common on_attach function
+local on_attach = function(client, bufnr)
+    local opts = { buffer = bufnr }
+    vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
+    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
+    vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, opts)
+    vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, opts)
+    vim.keymap.set('n', 'go', vim.lsp.buf.type_definition, opts)
+    vim.keymap.set('n', 'gr', vim.lsp.buf.references, opts)
+    vim.keymap.set('n', 'gs', vim.lsp.buf.signature_help, opts)
+    vim.keymap.set('n', '<F2>', vim.lsp.buf.rename, opts)
+    vim.keymap.set({ 'n', 'x' }, '<F3>', function() vim.lsp.buf.format { async = true } end, opts)
+    vim.keymap.set('n', '<F4>', vim.lsp.buf.code_action, opts)
+end
+
+-- Use Mason-LSPConfig to ensure servers are installed, and then configure them manually
 require("mason-lspconfig").setup({
     ensure_installed = {
         "html",
         "cssls",
-        "rust_analyzer",
---        "intelephense",
+        "intelephense",
         "ts_ls",
-        "pylsp",
+        "emmet_ls",
         "clangd",
-        "jsonls",
-    },
-    handlers = {
-        function(server_name)
-            if server_name == "intelephense" then
-                require("lspconfig")[server_name].setup({
-                    root_dir = function() return vim.loop.cwd() end,
-                })
-            else
-                require("lspconfig")[server_name].setup({})
-            end
-        end,
     },
 })
 
--- Setup html lsp inside of php files
-require("lspconfig").html.setup{
-  filetypes = { "html", "php" },
-  init_options = { provideFormatter = true },
-}
+-- Setup servers with a common on_attach callback
+local function disable_diagnostic(client)
+    client.handlers["textDocument/publishDiagnostics"] = function() end
+end
 
--- Setup keymaps when an LSP attaches to a buffer
-vim.api.nvim_create_autocmd('LspAttach', {
-    desc = 'LSP actions',
-    callback = function(event)
-        local opts = { buffer = event.buf }
-
-        vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
-        vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
-        vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, opts)
-        vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, opts)
-        vim.keymap.set('n', 'go', vim.lsp.buf.type_definition, opts)
-        vim.keymap.set('n', 'gr', vim.lsp.buf.references, opts)
-        vim.keymap.set('n', 'gs', vim.lsp.buf.signature_help, opts)
-        vim.keymap.set('n', '<F2>', vim.lsp.buf.rename, opts)
-        vim.keymap.set({ 'n', 'x' }, '<F3>', function() vim.lsp.buf.format { async = true } end, opts)
-        vim.keymap.set('n', '<F4>', vim.lsp.buf.code_action, opts)
+local capabilities = cmp_nvim_lsp.default_capabilities()
+lspconfig.intelephense.setup({
+    capabilities = capabilities,
+    on_attach = function(client, bufnr)
+        disable_diagnostic(client)
+        on_attach(client, bufnr)
     end,
+    filetypes = { "php", "html" }, -- Ensure this is correct
+})
+lspconfig.html.setup({
+    capabilities = capabilities,
+    on_attach = function(client, bufnr)
+        disable_diagnostic(client)
+        on_attach(client, bufnr)
+    end,
+    filetypes = { "html", "php" }, -- Add php here to allow the html LSP to attach
+    init_options = { provideFormatter = true },
+})
+lspconfig.emmet_ls.setup({
+    capabilities = capabilities,
+    on_attach = function(client, bufnr)
+        disable_diagnostic(client)
+        on_attach(client, bufnr)
+    end,
+    filetypes = { "html", "php" }, -- Add php here to allow the emmet LSP to attach
+    init_options = {
+        html = {
+            options = {
+                ["bem.enabled"] = true,
+                ["output.indent"] = "    "
+            }
+        }
+    }
 })
 
 -- Load LuaSnip and VSCode-style snippets
@@ -68,13 +82,8 @@ require("luasnip.loaders.from_vscode").lazy_load()
 
 -- Setup nvim-cmp
 local cmp = require('cmp')
-
 cmp.setup({
-    snippet = {
-        expand = function(args)
-            luasnip.lsp_expand(args.body)
-        end,
-    },
+    snippet = { expand = function(args) luasnip.lsp_expand(args.body) end },
     mapping = cmp.mapping.preset.insert({
         ['<Tab>'] = cmp.mapping.confirm({ select = true }),
         ['<C-Space>'] = cmp.mapping.complete(),
@@ -87,18 +96,23 @@ cmp.setup({
     },
 })
 
--- Enable Emmet
-local lspconfig = require('lspconfig')
-
-lspconfig.emmet_ls.setup({
-    filetypes = { "html", "css", "javascriptreact", "typescriptreact", "vue" },
-    init_options = {
-        html = {
-            options = {
-                ["bem.enabled"] = true, -- Enable BEM syntax support if needed
-                ["output.indent"] = "    "
-            }
-        }
-    }
+-- Add the autocmd for PHP
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = "php",
+    callback = function()
+        vim.opt.smartindent = true
+        vim.opt.indentexpr = nil
+    end,
 })
 
+-- Setup diagnostics
+vim.diagnostic.config({
+    virtual_text = {
+        prefix = "●",
+        spacing = 2,
+    },
+    signs = true,
+    underline = true,
+    update_in_insert = true,
+    severity_sort = true,
+})

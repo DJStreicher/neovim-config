@@ -1,10 +1,10 @@
-vim.api.nvim_create_autocmd("FileType", {
-    pattern = "php",
-    callback = function()
-        vim.opt.smartindent = true
-        vim.opt.indentexpr = nil
-    end,
-})
+-- vim.api.nvim_create_autocmd("FileType", {
+--     pattern = "php",
+--     callback = function()
+--         vim.opt.smartindent = true
+--         vim.opt.indentexpr = nil
+--     end,
+-- })
 -- vim.api.nvim_create_autocmd("FileType", {
 --     pattern = "php",
 --     callback = function()

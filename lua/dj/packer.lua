@@ -66,5 +66,6 @@ return require('packer').startup(function(use)
             require("luasnip.loaders.from_lua").load({ paths = "~/.config/nvim/after/plugin/snippets" })
         end
     }
+
 end)
 
