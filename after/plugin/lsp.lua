@@ -3,7 +3,6 @@ vim.opt.signcolumn = 'yes'
 vim.opt.termguicolors = true
 
 -- Add LSP capabilities from nvim-cmp
-local lspconfig = require('lspconfig')
 local cmp_nvim_lsp = require('cmp_nvim_lsp')
 
 -- Setup Mason and Mason LSP bridge
@@ -42,39 +41,46 @@ local function disable_diagnostic(client)
 end
 
 local capabilities = cmp_nvim_lsp.default_capabilities()
-lspconfig.intelephense.setup({
+-- Intelephense
+vim.lsp.config('intelephense', {
     capabilities = capabilities,
     on_attach = function(client, bufnr)
-        disable_diagnostic(client)
         on_attach(client, bufnr)
     end,
-    filetypes = { "php", "html" }, -- Ensure this is correct
+    filetypes = { "php", "html" },
 })
-lspconfig.html.setup({
+vim.lsp.enable('intelephense')
+
+-- HTML
+vim.lsp.config('html', {
     capabilities = capabilities,
     on_attach = function(client, bufnr)
         disable_diagnostic(client)
         on_attach(client, bufnr)
     end,
-    filetypes = { "html", "php" }, -- Add php here to allow the html LSP to attach
+    filetypes = { "html", "php" },
     init_options = { provideFormatter = true },
 })
-lspconfig.emmet_ls.setup({
+vim.lsp.enable('html')
+
+-- Emmet
+vim.lsp.config('emmet_ls', {
     capabilities = capabilities,
     on_attach = function(client, bufnr)
         disable_diagnostic(client)
         on_attach(client, bufnr)
     end,
-    filetypes = { "html", "php" }, -- Add php here to allow the emmet LSP to attach
+    filetypes = { "html", "php" },
     init_options = {
         html = {
             options = {
                 ["bem.enabled"] = true,
-                ["output.indent"] = "    "
-            }
-        }
-    }
+                ["output.indent"] = "    ",
+            },
+        },
+    },
 })
+vim.lsp.enable('emmet_ls')
 
 -- Load LuaSnip and VSCode-style snippets
 local luasnip = require('luasnip')
