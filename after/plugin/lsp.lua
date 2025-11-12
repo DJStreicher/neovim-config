@@ -5,11 +5,18 @@ vim.opt.termguicolors = true
 -- Add LSP capabilities from nvim-cmp
 local cmp_nvim_lsp = require('cmp_nvim_lsp')
 
+-- Common capabilities
+local capabilities = cmp_nvim_lsp.default_capabilities()
+
 -- Setup Mason and Mason LSP bridge
 require("mason").setup()
 
 -- Configure servers using a common on_attach function
 local on_attach = function(client, bufnr)
+    -- Prevent double attach
+    if vim.b[bufnr].lsp_attached then return end
+    vim.b[bufnr].lsp_attached = true
+
     local opts = { buffer = bufnr }
     vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
     vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
@@ -35,52 +42,31 @@ require("mason-lspconfig").setup({
     },
 })
 
--- Setup servers with a common on_attach callback
-local function disable_diagnostic(client)
-    client.handlers["textDocument/publishDiagnostics"] = function() end
+-- Server configurations
+local servers = {
+    clangd      = { cmd = { "clangd" } },
+    html        = { filetypes = { "html", "php" }, init_options = { provideFormatter = true }, disable_diag = true },
+    cssls       = {},
+    intelephense= { filetypes = { "php", "html" } },
+    ts_ls       = {},
+    emmet_ls    = { filetypes = { "html", "php" }, init_options = { html = { options = { ["bem.enabled"] = true, ["output.indent"] = "    " } } }, disable_diag = true },
+}
+
+-- Attach servers using new API
+for name, opts in pairs(servers) do
+    local config = {
+        on_attach = function(client, bufnr)
+            if opts.disable_diag then disable_diagnostics(client) end
+            on_attach(client, bufnr)
+        end,
+        capabilities = capabilities,
+        filetypes = opts.filetypes,
+        init_options = opts.init_options,
+        cmd = opts.cmd,
+    }
+    vim.lsp.config(name, config)
+    vim.lsp.enable(name)
 end
-
-local capabilities = cmp_nvim_lsp.default_capabilities()
--- Intelephense
-vim.lsp.config('intelephense', {
-    capabilities = capabilities,
-    on_attach = function(client, bufnr)
-        on_attach(client, bufnr)
-    end,
-    filetypes = { "php", "html" },
-})
-vim.lsp.enable('intelephense')
-
--- HTML
-vim.lsp.config('html', {
-    capabilities = capabilities,
-    on_attach = function(client, bufnr)
-        disable_diagnostic(client)
-        on_attach(client, bufnr)
-    end,
-    filetypes = { "html", "php" },
-    init_options = { provideFormatter = true },
-})
-vim.lsp.enable('html')
-
--- Emmet
-vim.lsp.config('emmet_ls', {
-    capabilities = capabilities,
-    on_attach = function(client, bufnr)
-        disable_diagnostic(client)
-        on_attach(client, bufnr)
-    end,
-    filetypes = { "html", "php" },
-    init_options = {
-        html = {
-            options = {
-                ["bem.enabled"] = true,
-                ["output.indent"] = "    ",
-            },
-        },
-    },
-})
-vim.lsp.enable('emmet_ls')
 
 -- Load LuaSnip and VSCode-style snippets
 local luasnip = require('luasnip')
