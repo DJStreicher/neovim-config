@@ -30,6 +30,11 @@ local on_attach = function(client, bufnr)
     vim.keymap.set('n', '<F4>', vim.lsp.buf.code_action, opts)
 end
 
+-- Setup servers with a common on_attach callback
+local function disable_diagnostic(client)
+    client.handlers["textDocument/publishDiagnostics"] = function() end
+end
+
 -- Use Mason-LSPConfig to ensure servers are installed, and then configure them manually
 require("mason-lspconfig").setup({
     ensure_installed = {
@@ -44,25 +49,63 @@ require("mason-lspconfig").setup({
 
 -- Server configurations
 local servers = {
-    clangd      = { cmd = { "clangd" } },
-    html        = { filetypes = { "html", "php" }, init_options = { provideFormatter = true }, disable_diag = true },
-    cssls       = {},
-    intelephense= { filetypes = { "php", "html" } },
-    ts_ls       = {},
-    emmet_ls    = { filetypes = { "html", "php" }, init_options = { html = { options = { ["bem.enabled"] = true, ["output.indent"] = "    " } } }, disable_diag = true },
+    clangd = {
+        cmd = { "clangd" },
+    },
+
+    html = {
+        filetypes = { "html", "php" },
+        init_options = { provideFormatter = true },
+        disable_diag = true,
+    },
+
+    cssls = {},
+
+    intelephense = {
+        filetypes = { "php", "html" },
+        settings = {
+            intelephense = {
+                diagnostic = {
+                    enable = true,
+                    undefinedTypes = true,
+                    undefinedFunctions = true,
+                    undefinedConstants = true,
+                    undefinedVariables = true,
+                    deprecated = true,
+                    unusedSymbols = "all",
+                },
+            },
+        },
+    },
+
+    ts_ls = {},
+
+    emmet_ls = {
+        filetypes = { "html", "php" },
+        init_options = {
+            html = {
+                options = {
+                    ["bem.enabled"] = true,
+                    ["output.indent"] = "    ",
+                },
+            },
+        },
+        disable_diag = true,
+    },
 }
 
 -- Attach servers using new API
 for name, opts in pairs(servers) do
     local config = {
         on_attach = function(client, bufnr)
-            if opts.disable_diag then disable_diagnostics(client) end
+            if opts.disable_diag then disable_diagnostic(client) end
             on_attach(client, bufnr)
         end,
         capabilities = capabilities,
         filetypes = opts.filetypes,
         init_options = opts.init_options,
         cmd = opts.cmd,
+        settings = opts.settings,
     }
     vim.lsp.config(name, config)
     vim.lsp.enable(name)
